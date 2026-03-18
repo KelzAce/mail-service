@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import { IsEmail, IsNotEmpty, IsObject, IsString } from 'class-validator';
 
 export class SendMailDto {
@@ -6,8 +7,9 @@ export class SendMailDto {
     example: 'user@example.com',
     description: 'Recipient email address or array of addresses',
   })
+  @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
   @IsEmail({}, { each: true })
-  to: string | string[];
+  to: string[];
 
   @ApiProperty({ example: 'Hello from the app', description: 'Email subject line' })
   @IsString()

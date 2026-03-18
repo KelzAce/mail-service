@@ -13,7 +13,7 @@ export class MailService {
 
   async sendWelcome(to: string, name: string): Promise<void> {
     this.dispatch({
-      to,
+      to: [to],
       subject: 'Welcome aboard!',
       template: 'welcome',
       context: { name },
@@ -22,7 +22,7 @@ export class MailService {
 
   async sendPasswordReset(to: string, resetLink: string): Promise<void> {
     this.dispatch({
-      to,
+      to: [to],
       subject: 'Reset your password',
       template: 'reset-password',
       context: { resetLink },
