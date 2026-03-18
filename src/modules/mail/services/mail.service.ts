@@ -1,49 +1,71 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { MailRepository } from '../repository/mail.repository';
-import { SendMailDto } from '../dto/send-mail.dto';
-
-// MailProducer is commented out – re-enable together with BullMQ / Redis.
-// import { MailProducer } from '../queue/mail.producer';
+import { SendEmailDto } from '../dto/send-email.dto';
+import { MailJob } from '../interfaces/mail-job.interface';
 
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
 
-  constructor(private readonly mailRepository: MailRepository) {}
+  constructor(
+    private readonly mailRepository: MailRepository,
+    private readonly configService: ConfigService,
+  ) {}
 
-  async sendWelcome(to: string, name: string): Promise<void> {
-    this.dispatch({
-      to: [to],
-      subject: 'Welcome aboard!',
-      template: 'welcome',
-      context: { name },
-    });
+  async send(dto: SendEmailDto): Promise<void> {
+    const retryAttempts =
+      this.configService.get<number>('mail.retryAttempts') ?? 3;
+    const retryDelayMs =
+      this.configService.get<number>('mail.retryDelayMs') ?? 2000;
+
+    const job: MailJob = {
+      to: Array.isArray(dto.to) ? dto.to : [dto.to],
+      subject: dto.subject,
+      text: dto.text,
+      html: dto.html,
+      from: dto.from,
+      attachments: dto.attachments,
+    };
+
+    await this.sendWithRetry(job, retryAttempts, retryDelayMs);
   }
 
-  async sendPasswordReset(to: string, resetLink: string): Promise<void> {
-    this.dispatch({
-      to: [to],
-      subject: 'Reset your password',
-      template: 'reset-password',
-      context: { resetLink },
-    });
+  async checkHealth(): Promise<{ ok: boolean }> {
+    const ok = await this.mailRepository.verify();
+    return { ok };
   }
 
-  async send(dto: SendMailDto): Promise<void> {
-    this.dispatch(dto);
-  }
-
-  async sendBulk(messages: SendMailDto[]): Promise<{ queued: number }> {
-    for (const dto of messages) {
-      this.dispatch(dto);
+  private async sendWithRetry(
+    job: MailJob,
+    maxAttempts: number,
+    baseDelayMs: number,
+  ): Promise<void> {
+    const maxDelayMs = 30_000;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await this.mailRepository.send(job);
+        return;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        if (attempt < maxAttempts) {
+          const delay = Math.min(
+            baseDelayMs * Math.pow(2, attempt - 1),
+            maxDelayMs,
+          );
+          this.logger.warn(
+            `Send attempt ${attempt} failed: ${message}. Retrying in ${delay}ms...`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        } else {
+          this.logger.error(
+            `Failed to send email after ${maxAttempts} attempts: ${message}`,
+          );
+          throw new InternalServerErrorException(
+            `Failed to send email after ${maxAttempts} attempts: ${message}`,
+          );
+        }
+      }
     }
-    return { queued: messages.length };
-  }
-
-  /** Fire-and-forget: sends asynchronously so the HTTP caller always gets 202. */
-  private dispatch(dto: SendMailDto): void {
-    this.mailRepository.send(dto).catch((err: Error) => {
-      this.logger.error(`Mail send failed: ${err.message}`, err.stack);
-    });
   }
 }

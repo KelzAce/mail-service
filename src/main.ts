@@ -10,7 +10,7 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('Mail Service API')
-    .setDescription('REST API for sending transactional emails via a BullMQ-backed queue')
+    .setDescription('NestJS SMTP email service powered by MxRoute, supporting attachments and automatic in-memory retry with exponential backoff.')
     .setVersion('1.0')
     .build();
 
