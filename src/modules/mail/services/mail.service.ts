@@ -33,6 +33,13 @@ export class MailService {
     this.dispatch(dto);
   }
 
+  async sendBulk(messages: SendMailDto[]): Promise<{ queued: number }> {
+    for (const dto of messages) {
+      this.dispatch(dto);
+    }
+    return { queued: messages.length };
+  }
+
   /** Fire-and-forget: sends asynchronously so the HTTP caller always gets 202. */
   private dispatch(dto: SendMailDto): void {
     this.mailRepository.send(dto).catch((err: Error) => {
