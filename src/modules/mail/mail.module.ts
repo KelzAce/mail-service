@@ -10,6 +10,7 @@ import { MailProcessor } from './queue/mail.processor';
 import { MailService } from './services/mail.service';
 import { MailRepository } from './repository/mail.repository';
 import { NodemailerRepository } from './repository/nodemailer.repository';
+import { MailController } from './controllers/mail.controller';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { NodemailerRepository } from './repository/nodemailer.repository';
     }),
     BullModule.registerQueue({ name: MAIL_QUEUE }),
   ],
+  controllers: [MailController],
   providers: [
     MailService,
     MailProducer,
