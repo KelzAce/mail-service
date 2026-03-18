@@ -1,4 +1,4 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { Logger } from '@nestjs/common';
 import { MAIL_QUEUE } from './mail.producer';
@@ -23,5 +23,10 @@ export class MailProcessor extends WorkerHost {
       this.logger.error(`Mail job [${job.id}] failed: ${error.message}`);
       throw error;
     }
+  }
+
+  @OnWorkerEvent('error')
+  onError(error: Error): void {
+    this.logger.error(`Worker error: ${error.message}`);
   }
 }
