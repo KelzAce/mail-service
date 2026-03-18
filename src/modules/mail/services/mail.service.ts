@@ -1,13 +1,18 @@
-import { Injectable } from '@nestjs/common';
-import { MailProducer } from '../queue/mail.producer';
+import { Injectable, Logger } from '@nestjs/common';
+import { MailRepository } from '../repository/mail.repository';
 import { SendMailDto } from '../dto/send-mail.dto';
+
+// MailProducer is commented out – re-enable together with BullMQ / Redis.
+// import { MailProducer } from '../queue/mail.producer';
 
 @Injectable()
 export class MailService {
-  constructor(private readonly mailProducer: MailProducer) {}
+  private readonly logger = new Logger(MailService.name);
+
+  constructor(private readonly mailRepository: MailRepository) {}
 
   async sendWelcome(to: string, name: string): Promise<void> {
-    await this.mailProducer.enqueue({
+    this.dispatch({
       to,
       subject: 'Welcome aboard!',
       template: 'welcome',
@@ -16,7 +21,7 @@ export class MailService {
   }
 
   async sendPasswordReset(to: string, resetLink: string): Promise<void> {
-    await this.mailProducer.enqueue({
+    this.dispatch({
       to,
       subject: 'Reset your password',
       template: 'reset-password',
@@ -25,6 +30,13 @@ export class MailService {
   }
 
   async send(dto: SendMailDto): Promise<void> {
-    await this.mailProducer.enqueue(dto);
+    this.dispatch(dto);
+  }
+
+  /** Fire-and-forget: sends asynchronously so the HTTP caller always gets 202. */
+  private dispatch(dto: SendMailDto): void {
+    this.mailRepository.send(dto).catch((err: Error) => {
+      this.logger.error(`Mail send failed: ${err.message}`, err.stack);
+    });
   }
 }
