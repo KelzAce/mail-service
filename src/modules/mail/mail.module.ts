@@ -5,9 +5,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
 
 import { MailService } from './services/mail.service';
+import { DirectAdminService } from './services/directadmin.service';
 import { MailRepository } from './repository/mail.repository';
 import { NodemailerRepository } from './repository/nodemailer.repository';
 import { MailController } from './controllers/mail.controller';
+import { AccountController } from './controllers/account.controller';
 
 // BullMQ queue imports are commented out – re-enable when Redis is available.
 // import { BullModule } from '@nestjs/bullmq';
@@ -41,9 +43,10 @@ import { MailController } from './controllers/mail.controller';
     }),
     // BullModule.registerQueue({ name: MAIL_QUEUE }),
   ],
-  controllers: [MailController],
+  controllers: [MailController, AccountController],
   providers: [
     MailService,
+    DirectAdminService,
     // MailProducer,   // requires Redis – re-enable with BullModule above
     // MailProcessor,  // requires Redis – re-enable with BullModule above
     {

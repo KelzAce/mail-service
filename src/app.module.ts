@@ -1,13 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import mailConfig from './config/mail.config';
+import directadminConfig from './config/directadmin.config';
 import { MailModule } from './modules/mail/mail.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [mailConfig],
+      load: [mailConfig, directadminConfig],
     }),
     // BullModule.forRootAsync requires a running Redis instance.
     // Commented out so the service starts and the APIs are testable without Redis.
